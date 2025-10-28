@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title>스터디 통합 운영 — 홈</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; }
+    .container { padding: 20px 16px; max-width: 960px; margin: 0 auto; }
+    .card { border:1px solid #ddd; border-radius:10px; padding:12px; margin-top:16px; }
+    .meta { color:#666; font-size:12px; }
+    a { color: #333; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <!-- ✅ 명명된 프래그먼트 호출 -->
+  <div th:replace="fragments/header :: siteHeader"></div>
+
+  <main class="container">
+    <h1>홈 화면 OK!</h1>
+    <p>여기까지 뜨면 스프링이 제대로 동작하는 거야.</p>
+
+    <div class="card">
+      <h3>홍보중 스터디</h3>
+      <ul id="promo"><li class="meta">불러오는 중…</li></ul>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h3>바로 가기</h3>
+      <ul>
+        <li><a th:href="@{/explore}">스터디 탐색으로 이동</a></li>
+        <li><a th:href="@{/sessions}">세션 페이지</a></li>
+        <li><a th:href="@{/notifications}">알림 확인</a></li>
+      </ul>
+    </div>
+  </main>
+
+  <script>
+    // 홈의 프로모 리스트
+    fetch('/api/studies')
+      .then(r => r.json())
+      .then(items => {
+        const ul = document.getElementById('promo');
+        ul.innerHTML = '';
+        items.slice(0, 3).forEach(s => {
+          const li = document.createElement('li');
+          const status = s.displayStatus === '마감' ? '마감' : '모집중';
+          li.textContent = `${s.title} [${s.category}] (${status}) ${s.current ?? 0}/${s.capacity ?? '-'}`;
+          ul.appendChild(li);
+        });
+        if (ul.children.length === 0) {
+          ul.innerHTML = '<li class="meta">표시할 스터디가 없습니다</li>';
+        }
+      })
+      .catch(() => {
+        const ul = document.getElementById('promo');
+        ul.innerHTML = '<li class="meta">불러오기에 실패했습니다</li>';
+      });
+  </script>
+</body>
+</html>

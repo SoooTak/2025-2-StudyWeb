@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    .topbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid #eee; position:sticky; top:0; background:#fff; z-index:10; }
+    .brand { font-weight:800; }
+    .nav { display:flex; gap:12px; align-items:center; }
+    .link { text-decoration:none; color:#333; }
+    .btn { padding:6px 10px; border:1px solid #333; background:#fff; border-radius:8px; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <!-- 명명된 프래그먼트 -->
+  <header class="topbar" th:fragment="siteHeader">
+    <div class="brand"><a class="link" th:href="@{/}">StudyHub</a></div>
+    <nav class="nav">
+      <a class="link" th:href="@{/explore}">스터디 탐색</a>
+      <a class="link" th:href="@{/sessions}">세션</a>
+      <a class="link" th:href="@{/notifications}">🔔 알림</a>
+
+      <!-- 비회원 -->
+      <span th:if="${currentUser == null}">
+        <a class="link" th:href="@{/login}">로그인</a>
+        <a class="link" th:href="@{/register}">회원가입</a>
+      </span>
+
+      <!-- 회원 -->
+      <span th:if="${currentUser != null}" style="display:inline-flex; gap:12px; align-items:center;">
+        <span th:text="${currentUser.nickname}">닉네임</span>
+        <!-- ✅ GET 로그아웃 링크 (CSRF 불필요) -->
+        <a class="btn" th:href="@{/logout}">로그아웃</a>
+      </span>
+    </nav>
+  </header>
+</body>
+</html>

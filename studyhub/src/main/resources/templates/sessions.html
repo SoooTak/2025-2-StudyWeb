@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <title>세션/출석 테스트</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; }
+    input, button { padding: 6px 8px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background: #f7f7f7; }
+    .muted { color:#666; }
+  </style>
+</head>
+<body>
+  <h1>세션/출석 테스트</h1>
+
+  <div>
+    <label>스터디 ID:
+      <input type="number" id="studyId" value="1"/>
+    </label>
+    <button id="load">세션 불러오기</button>
+    <button id="create">세션 생성(지금~+1h)</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>세션ID</th><th>제목</th><th>시작</th><th>종료</th><th>모드</th><th>출석</th><th>내 상태</th><th>액션</th>
+      </tr>
+    </thead>
+    <tbody id="rows"><tr><td colspan="8" class="muted">버튼을 눌러 불러오세요</td></tr></tbody>
+  </table>
+
+<script>
+  const rows = document.getElementById('rows');
+
+  // 로컬(브라우저) 시각을 'YYYY-MM-DDTHH:mm:ss' 형태로 만들어 서버에 보냄(타임존 표기 없음 = LocalDateTime)
+  function toLocalDateTimeString(d) {
+    const pad = n => String(n).padStart(2, '0');
+    return (
+      d.getFullYear() + '-' +
+      pad(d.getMonth()+1) + '-' +
+      pad(d.getDate()) + 'T' +
+      pad(d.getHours()) + ':' +
+      pad(d.getMinutes()) + ':' +
+      pad(d.getSeconds())
+    );
+  }
+
+  // 안전한 fetch(JSON + 에러 메시지)
+  async function fetchJson(url, init) {
+    const res = await fetch(url, init);
+    let data = null;
+    try { data = await res.json(); } catch(e) {}
+    if (!res.ok) {
+      const msg = (data && (data.message || data.code)) ? `${data.code || ''} ${data.message || ''}` : `HTTP ${res.status}`;
+      throw new Error(msg.trim());
+    }
+    return data;
+  }
+
+  document.getElementById('load').onclick = load;
+  document.getElementById('create').onclick = async () => {
+    try {
+      const studyId = document.getElementById('studyId').value || 1;
+      const now = new Date();
+      const plus1 = new Date(now.getTime() + 60*60*1000);
+
+      await fetchJson(`/api/studies/${studyId}/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({
+          title: '테스트 세션 ' + toLocalDateTimeString(now).replace('T',' '),
+          startAt: toLocalDateTimeString(now),   // 로컬시각 그대로 보냄
+          endAt:   toLocalDateTimeString(plus1), // 로컬시각 그대로 보냄
+          useAttendance: true,
+          mode: 'SELF',
+          openOffsetMinutes: -10,
+          closeOffsetMinutes: 30
+        })
+      });
+      alert('생성 완료');
+      load();
+    } catch (e) {
+      alert('세션 생성 실패: ' + e.message);
+    }
+  };
+
+  async function load(){
+    const studyId = document.getElementById('studyId').value || 1;
+    rows.innerHTML = '<tr><td colspan="8" class="muted">불러오는 중…</td></tr>';
+
+    try {
+      const data = await fetchJson(`/api/studies/${studyId}/sessions`);
+      const items = data.items || [];
+      if (items.length === 0) {
+        rows.innerHTML = '<tr><td colspan="8" class="muted">세션이 없습니다</td></tr>';
+        return;
+      }
+      rows.innerHTML = '';
+      items.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${s.id}</td>
+          <td>${s.title}</td>
+          <td>${s.startAt?.replace('T',' ')}</td>
+          <td>${s.endAt?.replace('T',' ')}</td>
+          <td>${s.mode}</td>
+          <td>${s.useAttendance ? '사용' : '미사용'}</td>
+          <td class="my-${s.id}"><span class="muted">확인중…</span></td>
+          <td>
+            <button data-id="${s.id}">SELF 출석</button>
+          </td>
+        `;
+        rows.appendChild(tr);
+
+        // 내 상태 조회
+        fetchJson(`/api/sessions/${s.id}/attendance/my`)
+          .then(st => {
+            const cell = document.querySelector('.my-' + s.id);
+            if (!st.has) cell.innerHTML = '<span class="muted">기록 없음</span>';
+            else cell.textContent = `${st.status} (${(st.markedAt || '').toString().replace('T',' ')})`;
+          })
+          .catch(() => {
+            const cell = document.querySelector('.my-' + s.id);
+            cell.innerHTML = '<span class="muted">조회 실패</span>';
+          });
+
+        // SELF 출석 버튼
+        tr.querySelector('button').onclick = async () => {
+          try {
+            const res = await fetchJson(`/api/sessions/${s.id}/attendance/self`, { method:'POST' });
+            // result: NOT_OPEN | CLOSED | PRESENT | LATE
+            alert('기록: ' + (res.result || '—'));
+            // 상태 갱신
+            const st = await fetchJson(`/api/sessions/${s.id}/attendance/my`);
+            const cell = document.querySelector('.my-' + s.id);
+            if (!st.has) cell.innerHTML = '<span class="muted">기록 없음</span>';
+            else cell.textContent = `${st.status} (${(st.markedAt || '').toString().replace('T',' ')})`;
+          } catch (e) {
+            alert('출석 실패: ' + e.message); // 예: NOT_OPEN/CLOSED 외의 409/404 등
+          }
+        };
+      });
+    } catch (e) {
+      rows.innerHTML = `<tr><td colspan="8" class="muted">로드 실패: ${e.message}</td></tr>`;
+    }
+  }
+</script>
+</body>
+</html>

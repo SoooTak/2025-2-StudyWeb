@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>회원가입</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 24px; }
+    .container { max-width:640px; margin:0 auto; }
+    .err { color:red; }
+    form { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    a { color:#333; text-decoration:none; }
+  </style>
+</head>
+<body>
+<main class="container">
+  <h2>회원가입</h2>
+  <p th:if="${error}" th:text="${error}" class="err"></p>
+
+  <form th:action="@{/register}" method="post">
+    <label>아이디(소문자)
+      <input type="text" name="username" th:value="${form.username}" placeholder="예: leader01" required />
+    </label>
+    <label>닉네임
+      <input type="text" name="nickname" th:value="${form.nickname}" required />
+    </label>
+
+    <label>비밀번호
+      <input type="password" name="password" required />
+    </label>
+    <label>이름
+      <input type="text" name="name" th:value="${form.name}" required />
+    </label>
+
+    <label>이메일
+      <input type="email" name="email" th:value="${form.email}" required />
+    </label>
+    <label>전화번호
+      <input type="text" name="phone" th:value="${form.phone}" />
+    </label>
+
+    <div style="grid-column: span 2; margin-top:4px;">
+      <button type="submit">가입하기</button>
+      <a th:href="@{/login}" style="margin-left:8px;">로그인</a> · <a th:href="@{/}">홈으로</a>
+    </div>
+  </form>
+</main>
+</body>
+</html>
