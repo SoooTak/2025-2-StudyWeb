@@ -1,38 +1,45 @@
 package com.studyhub.study;
 
-import com.studyhub.domain.entity.Notification;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import com.studyhub.domain.entity.Notification;
+import com.studyhub.security.AuthUtils;
 
 @RestController
 @RequestMapping("/api/notifications")
 public class NotificationApi {
 
-  private static final long DEMO_USER_ID = 2L; // 로그인 전 임시
-  private final NotificationService service;
+  private final NotificationService notificationService;
 
-  public NotificationApi(NotificationService service) { this.service = service; }
+  public NotificationApi(NotificationService notificationService) {
+    this.notificationService = notificationService;
+  }
 
+  /** 내 알림 목록 (Map 래핑: { "items": [...] } 형태 유지) */
   @GetMapping
   public Map<String, Object> list() {
-    return Map.of("items", service.listFor(DEMO_USER_ID));
+    Long userId = AuthUtils.requireUserId();
+    List<Notification> items = notificationService.listMy(userId);
+    return Map.of("items", items);
   }
 
+  /** 개별 읽음 처리 (204 No Content) */
   @PostMapping("/{id}/read")
   public ResponseEntity<?> read(@PathVariable Long id) {
-    try {
-      service.markRead(id, DEMO_USER_ID);
-      return ResponseEntity.noContent().build();
-    } catch (Exception e) {
-      return ResponseEntity.status(404).body(Map.of("code","NOT_FOUND","message","알림이 없습니다"));
-    }
+    Long userId = AuthUtils.requireUserId();
+    notificationService.markRead(userId, id);
+    return ResponseEntity.noContent().build();
   }
 
+  /** 모두 읽음 처리 (204 No Content) */
   @PostMapping("/read-all")
-  public Map<String, Object> readAll() {
-    int n = service.markAllRead(DEMO_USER_ID);
-    return Map.of("updated", n);
+  public ResponseEntity<?> readAll() {
+    Long userId = AuthUtils.requireUserId();
+    notificationService.markAllRead(userId);
+    return ResponseEntity.noContent().build();
   }
 }

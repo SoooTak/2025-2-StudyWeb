@@ -2,68 +2,96 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8"/>
-  <title>리더 콘솔(임시)</title>
+  <title>관리자 콘솔</title>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 24px; }
+    body { font-family: system-ui, sans-serif; margin: 20px; }
+    .row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
     input, button { padding: 6px 8px; }
     table { border-collapse: collapse; width: 100%; margin-top: 12px; }
-    th, td { border: 1px solid #ddd; padding: 8px; }
-    th { background: #f7f7f7; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    .ok { color: #0a0; }
+    .err { color: #b00; }
   </style>
 </head>
 <body>
-  <h1>리더 콘솔(임시)</h1>
+  <h1>관리자 콘솔 (리더/공동리더)</h1>
 
-  <label>스터디 ID:
-    <input type="number" id="studyId" value="1"/>
-  </label>
-  <button id="load">대기중 불러오기</button>
+  <div class="row">
+    <label>studyId: <input id="studyId" type="number" value="4" min="1"></label>
+    <button id="btnLoad">대기 신청 불러오기</button>
+    <span id="status" class="ok"></span>
+  </div>
 
-  <table>
+  <table id="tbl">
     <thead>
-      <tr><th>appId</th><th>userId</th><th>status</th><th>액션</th></tr>
+      <tr>
+        <th>applicationId</th>
+        <th>userId</th>
+        <th>status</th>
+        <th>createdAt</th>
+        <th>액션</th>
+      </tr>
     </thead>
-    <tbody id="rows"><tr><td colspan="4">불러오기를 누르세요</td></tr></tbody>
+    <tbody></tbody>
   </table>
 
-<script>
-  const rows = document.getElementById('rows');
-  document.getElementById('load').onclick = () => {
-    const id = document.getElementById('studyId').value;
-    fetch(`/api/admin/pending?studyId=${id}`)
-      .then(r => r.json())
-      .then(data => {
+  <script>
+    const $ = s => document.querySelector(s);
+    const tbody = $('#tbl tbody');
+    const status = $('#status');
+
+    async function load() {
+      status.textContent = '';
+      tbody.innerHTML = '<tr><td colspan="5">불러오는 중…</td></tr>';
+      const studyId = Number($('#studyId').value);
+      try {
+        const r = await fetch(`/api/admin/pending?studyId=${studyId}`);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data = await r.json();
         const items = data.items || [];
         if (items.length === 0) {
-          rows.innerHTML = '<tr><td colspan="4">대기중 신청 없음</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="5">대기중 신청이 없습니다</td></tr>';
+          status.textContent = 'OK';
           return;
         }
-        rows.innerHTML = '';
-        items.forEach(a => {
+        tbody.innerHTML = '';
+        for (const a of items) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td>${a.id}</td>
             <td>${a.userId}</td>
             <td>${a.status}</td>
+            <td>${a.createdAt ?? ''}</td>
             <td>
-              <button data-action="approve" data-id="${a.id}">승인</button>
-              <button data-action="reject" data-id="${a.id}">거절</button>
-            </td>
-          `;
-          tr.querySelector('[data-action="approve"]').onclick = () => {
-            fetch(`/api/applications/${a.id}/approve`, { method: 'POST' })
-              .then(r => r.json())
-              .then(res => { alert('승인: ' + (res.status || res.message)); document.getElementById('load').click(); });
-          };
-          tr.querySelector('[data-action="reject"]').onclick = () => {
-            fetch(`/api/applications/${a.id}/reject`, { method: 'POST' })
-              .then(r => r.json())
-              .then(res => { alert('거절: ' + (res.status || res.message)); document.getElementById('load').click(); });
-          };
-          rows.appendChild(tr);
-        });
-      });
-  };
-</script>
+              <button data-act="approve" data-id="${a.id}">승인</button>
+              <button data-act="reject" data-id="${a.id}">거절</button>
+            </td>`;
+          tbody.appendChild(tr);
+        }
+        status.textContent = 'OK';
+      } catch (e) {
+        status.textContent = '로드 실패';
+        status.className = 'err';
+        tbody.innerHTML = `<tr><td colspan="5">오류: ${e.message}</td></tr>`;
+      }
+    }
+
+    tbody.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const id = btn.dataset.id;
+      const act = btn.dataset.act; // approve | reject
+      try {
+        const r = await fetch(`/api/applications/${id}/${act}`, { method: 'POST' });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        await load();
+        alert(`${act === 'approve' ? '승인' : '거절'} 완료`);
+      } catch (e) {
+        alert('실패: ' + e.message);
+      }
+    });
+
+    $('#btnLoad').addEventListener('click', load);
+  </script>
 </body>
 </html>

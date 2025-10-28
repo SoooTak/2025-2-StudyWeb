@@ -1,20 +1,21 @@
 package com.studyhub.study;
 
-import com.studyhub.domain.entity.Attendance;
-import com.studyhub.domain.entity.StudySession;
-import com.studyhub.domain.repository.AttendanceRepository;
-import com.studyhub.domain.repository.StudySessionRepository;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import com.studyhub.domain.entity.Attendance;
+import com.studyhub.domain.entity.StudySession;
+import com.studyhub.domain.repository.AttendanceRepository;
+import com.studyhub.domain.repository.StudySessionRepository;
+import com.studyhub.security.AuthUtils;
+
 @RestController
 public class SessionApi {
-
-  private static final long DEMO_USER_ID = 2L; // 로그인 전 임시
 
   private final StudySessionRepository sessionRepo;
   private final AttendanceRepository attendanceRepo;
@@ -31,12 +32,15 @@ public class SessionApi {
     this.notificationService = notificationService;
   }
 
+  /** 특정 스터디의 세션 목록 */
   @GetMapping("/api/studies/{studyId}/sessions")
   public Map<String, Object> list(@PathVariable Long studyId) {
     List<StudySession> items = sessionRepo.findByStudyIdOrderByStartAtAsc(studyId);
     return Map.of("items", items);
   }
 
+  /** (리더/공동리더) 세션 생성 */
+  @PreAuthorize("@authz.canManageStudy(#studyId)")
   @PostMapping("/api/studies/{studyId}/sessions")
   public ResponseEntity<?> create(@PathVariable Long studyId, @RequestBody CreateReq req) {
     if (req.title() == null || req.title().isBlank()) {
@@ -45,6 +49,8 @@ public class SessionApi {
     if (req.startAt() == null || req.endAt() == null || !req.endAt().isAfter(req.startAt())) {
       return ResponseEntity.badRequest().body(Map.of("code","INVALID","message","시간 범위가 올바르지 않습니다"));
     }
+
+    // 생성
     StudySession ss = new StudySession();
     ss.setStudyId(studyId);
     ss.setTitle(req.title());
@@ -68,18 +74,22 @@ public class SessionApi {
     return ResponseEntity.status(201).body(Map.of("id", ss.getId()));
   }
 
+  /** 내 출석 조회(로그인 필요) */
   @GetMapping("/api/sessions/{sessionId}/attendance/my")
   public Map<String, Object> my(@PathVariable Long sessionId) {
-    Attendance att = attendanceRepo.findBySessionIdAndUserId(sessionId, DEMO_USER_ID).orElse(null);
+    Long userId = AuthUtils.requireUserId();
+    Attendance att = attendanceRepo.findBySessionIdAndUserId(sessionId, userId).orElse(null);
     return att == null
         ? Map.of("has", false)
         : Map.of("has", true, "status", att.getStatus(), "markedAt", att.getMarkedAt());
   }
 
+  /** 자기출석(SELF) (로그인 필요) */
   @PostMapping("/api/sessions/{sessionId}/attendance/self")
   public ResponseEntity<?> self(@PathVariable Long sessionId) {
+    Long userId = AuthUtils.requireUserId();
     try {
-      var res = attendanceService.selfCheck(sessionId, DEMO_USER_ID);
+      var res = attendanceService.selfCheck(sessionId, userId);
       return ResponseEntity.ok(Map.of("result", res.state(), "attendanceId", res.attendanceId()));
     } catch (IllegalArgumentException e) {
       return ResponseEntity.status(404).body(Map.of("code","NOT_FOUND","message", e.getMessage()));
