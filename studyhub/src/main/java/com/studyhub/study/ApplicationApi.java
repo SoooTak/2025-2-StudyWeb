@@ -1,62 +1,49 @@
 package com.studyhub.study;
 
-import com.studyhub.domain.entity.Application;
-import com.studyhub.domain.repository.ApplicationRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import com.studyhub.security.AuthUtils;
 
 @RestController
+@RequestMapping("/api")
 public class ApplicationApi {
 
-  private final ApplicationRepository appRepo;
-  public ApplicationApi(ApplicationRepository appRepo) { this.appRepo = appRepo; }
+    private final ApplicationService applicationService;
 
-  // 로그인 전: 테스트용 고정 유저 ID
-  private static final long DEMO_USER_ID = 2L;
-
-  // 신청하기
-  @PostMapping("/api/studies/{id}/apply")
-  public ResponseEntity<?> apply(@PathVariable Long id) {
-    // 같은 스터디에 PENDING 중복 방지(최소 검증)
-    var dup = appRepo.findByStudyIdAndUserIdAndStatus(id, DEMO_USER_ID, "PENDING");
-    if (dup.isPresent()) {
-      return ResponseEntity.badRequest().body(Map.of(
-        "code","ALREADY_PENDING",
-        "message","이미 신청 대기중입니다",
-        "applicationId", dup.get().getId()
-      ));
+    public ApplicationApi(ApplicationService applicationService) {
+        this.applicationService = applicationService;
     }
-    var app = new Application();
-    app.setStudyId(id);
-    app.setUserId(DEMO_USER_ID);
-    appRepo.save(app);
-    return ResponseEntity.status(201).body(Map.of(
-      "applicationId", app.getId(),
-      "status", app.getStatus()
-    ));
-  }
 
-  // 신청 취소
-  @DeleteMapping("/api/applications/{appId}")
-  public ResponseEntity<?> cancel(@PathVariable Long appId) {
-    var app = appRepo.findById(appId).orElse(null);
-    if (app == null || !app.getUserId().equals(DEMO_USER_ID)) {
-      return ResponseEntity.status(404).body(Map.of("code","NOT_FOUND","message","신청이 없습니다"));
+    /** 스터디 지원(로그인 필요) — 기존 서비스 시그니처를 유지한다고 가정 */
+    @PostMapping("/studies/{studyId}/apply")
+    public ResponseEntity<?> apply(@PathVariable Long studyId) {
+        Long userId = AuthUtils.requireUserId(); // 현재 로그인 사용자
+        return ResponseEntity.ok(applicationService.apply(studyId, userId));
     }
-    app.setStatus("CANCELLED");
-    appRepo.save(app);
-    return ResponseEntity.noContent().build();
-  }
 
-  // 특정 스터디에 대해 내 신청상태 조회(버튼 표시용)
-  @GetMapping("/api/studies/{id}/my-application")
-  public Map<String, Object> myApplication(@PathVariable Long id) {
-    var pending = appRepo.findByStudyIdAndUserIdAndStatus(id, DEMO_USER_ID, "PENDING");
-    if (pending.isPresent()) {
-      return Map.of("hasPending", true, "applicationId", pending.get().getId());
+    /** 내 지원 취소(로그인 필요) */
+    @DeleteMapping("/applications/{applicationId}")
+    public ResponseEntity<?> cancel(@PathVariable Long applicationId) {
+        Long userId = AuthUtils.requireUserId();
+        applicationService.cancel(applicationId, userId);
+        return ResponseEntity.noContent().build();
     }
-    return Map.of("hasPending", false);
-  }
+
+    /** (리더/공동리더) 지원자 승인 — applicationId로 권한 판별 */
+    @PreAuthorize("@authz.canManageApplication(#applicationId)")
+    @PostMapping("/applications/{applicationId}/approve")
+    public ResponseEntity<?> approve(@PathVariable Long applicationId) {
+        Long actorId = AuthUtils.requireUserId();
+        return ResponseEntity.ok(applicationService.approve(applicationId, actorId));
+    }
+
+    /** (리더/공동리더) 지원자 거절 — applicationId로 권한 판별 */
+    @PreAuthorize("@authz.canManageApplication(#applicationId)")
+    @PostMapping("/applications/{applicationId}/reject")
+    public ResponseEntity<?> reject(@PathVariable Long applicationId) {
+        Long actorId = AuthUtils.requireUserId();
+        return ResponseEntity.ok(applicationService.reject(applicationId, actorId));
+    }
 }

@@ -1,4 +1,4 @@
-package com.studyhub.membership;
+package com.studyhub.domain.membership;
 
 public enum MembershipRole {
     MEMBER,

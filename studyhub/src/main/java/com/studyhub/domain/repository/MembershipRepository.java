@@ -1,12 +1,23 @@
 package com.studyhub.domain.repository;
 
-import com.studyhub.domain.entity.Membership;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
+import com.studyhub.domain.entity.Membership;
 
 public interface MembershipRepository extends JpaRepository<Membership, Long> {
-  long countByStudyId(Long studyId);
-  boolean existsByStudyIdAndUserId(Long studyId, Long userId);
-  List<Membership> findByStudyId(Long studyId); // 알림 전파용
+
+    // 멤버 여부
+    boolean existsByStudyIdAndUserId(Long studyId, Long userId);
+
+    // 개별 멤버십
+    Optional<Membership> findByStudyIdAndUserId(Long studyId, Long userId);
+
+    // 스터디별 멤버 수
+    long countByStudyId(Long studyId);
+
+    // ✅ 스터디별 전체 멤버 조회 (NotificationService에서 사용)
+    List<Membership> findByStudyId(Long studyId);
 }

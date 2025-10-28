@@ -1,19 +1,25 @@
 package com.studyhub.domain.repository;
 
-import com.studyhub.domain.entity.Application;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
-import jakarta.persistence.LockModeType;
-import java.util.Optional;
 import java.util.List;
+import java.util.Optional;
 
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.studyhub.domain.entity.Application;
 
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
-  Optional<Application> findByStudyIdAndUserIdAndStatus(Long studyId, Long userId, String status);
 
-  // 승인 시 같은 신청을 중복 승인하지 않도록 PESSIMISTIC_WRITE 잠금
-  @Lock(LockModeType.PESSIMISTIC_WRITE)
-  Optional<Application> findByIdAndStatus(Long id, String status);
+    Optional<Application> findByIdAndStatus(Long id, String status);
 
-  List<Application> findByStudyIdAndStatusOrderByCreatedAtAsc(Long studyId, String status);
+    // 스터디+사용자 기준 대기중 중복 검사
+    Optional<Application> findByStudyIdAndUserIdAndStatus(Long studyId, Long userId, String status);
+
+    // 본인 신청 취소용(대기중만)
+    Optional<Application> findByIdAndUserIdAndStatus(Long id, Long userId, String status);
+
+    // 스터디별 특정 상태 전체
+    List<Application> findByStudyIdAndStatus(Long studyId, String status);
+
+    // ✅ 스터디별 특정 상태를 생성일 오름차순으로
+    List<Application> findByStudyIdAndStatusOrderByCreatedAtAsc(Long studyId, String status);
 }
