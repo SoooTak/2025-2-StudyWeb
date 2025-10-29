@@ -2,7 +2,12 @@ package com.studyhub.auth;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+
+import jakarta.validation.Valid;
 
 @Controller
 public class AuthController {
@@ -25,16 +30,20 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public String doRegister(@ModelAttribute("form") RegisterForm form, Model model){
+    public String doRegister(@Valid @ModelAttribute("form") RegisterForm form,
+                             BindingResult bindingResult,
+                             Model model){
+        if (bindingResult.hasErrors()) {
+            return "auth/register";
+        }
         try {
             auth.register(form);
-            // 회원가입 성공 → 로그인 페이지로
             return "redirect:/login?registered";
         } catch (IllegalArgumentException e){
             model.addAttribute("error", e.getMessage());
             return "auth/register";
         } catch (Exception e){
-            model.addAttribute("error", "알 수 없는 오류가 발생했습니다.");
+            model.addAttribute("error", "Unexpected error occurred.");
             return "auth/register";
         }
     }

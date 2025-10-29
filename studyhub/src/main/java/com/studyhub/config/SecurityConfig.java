@@ -8,7 +8,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.AndRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
 
 import com.studyhub.security.CustomUserDetailsService;
 
@@ -18,11 +21,21 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            DaoAuthenticationProvider authProvider) throws Exception {
+        // SavedRequest: 브라우저 네비게이션만 저장( /api/** 및 AJAX는 저장 안 함 )
+        HttpSessionRequestCache requestCache = new HttpSessionRequestCache();
+        requestCache.setRequestMatcher(
+            new AndRequestMatcher(
+                new AntPathRequestMatcher("/**"),
+                new NegatedRequestMatcher(new AntPathRequestMatcher("/api/**"))
+            )
+        );
+
         http
             .authorizeHttpRequests(auth -> auth
-                // 완전 공개
+                // 완전 공개(정적 리소스 포함)
                 .requestMatchers("/", "/error", "/favicon.ico",
-                        "/css/**", "/js/**", "/images/**").permitAll()
+                        "/css/**", "/js/**", "/images/**",
+                        "/app.css", "/notify.js", "/home.js").permitAll()
                 // 공개 화면
                 .requestMatchers("/login", "/register").permitAll()
                 .requestMatchers("/explore", "/explore/**").permitAll()
@@ -41,13 +54,11 @@ public class SecurityConfig {
                 .failureUrl("/login?error")
                 .permitAll()
             )
-            // ✅ HTTP Basic 완전히 비활성화 (팝업 방지)
             .httpBasic(httpBasic -> httpBasic.disable())
-            // ✅ 보호 자원 접근 시 폼 로그인 페이지로 리다이렉트
             .exceptionHandling(e -> e.authenticationEntryPoint(
                 new LoginUrlAuthenticationEntryPoint("/login")
             ))
-            // 간단 모드: GET 로그아웃
+            .requestCache(c -> c.requestCache(requestCache))   // ✔ SavedRequest 커스터마이즈
             .logout(logout -> logout
                 .logoutRequestMatcher(new AntPathRequestMatcher("/logout", "GET"))
                 .logoutSuccessUrl("/login?logout")

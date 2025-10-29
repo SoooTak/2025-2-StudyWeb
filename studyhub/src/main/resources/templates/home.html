@@ -2,59 +2,89 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8"/>
-  <title>스터디 통합 운영 — 홈</title>
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 0; }
-    .container { padding: 20px 16px; max-width: 960px; margin: 0 auto; }
-    .card { border:1px solid #ddd; border-radius:10px; padding:12px; margin-top:16px; }
-    .meta { color:#666; font-size:12px; }
-    a { color: #333; text-decoration: none; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>StudyHub - 홈</title>
+  <link rel="stylesheet" href="/app.css"/>
+  <!-- 상단 공통 헤더 프래그먼트 -->
+  <th:block th:replace="fragments/header :: headerFragment"></th:block>
 </head>
 <body>
-  <!-- ✅ 명명된 프래그먼트 호출 -->
-  <div th:replace="fragments/header :: siteHeader"></div>
+<main class="container">
+  <!-- 히어로(축소) -->
+  <section class="hero hero--compact">
+    <div class="hero__content">
+      <h1 class="hero__title">스터디 통합 운영</h1>
+      <p class="hero__subtitle">모집 · 일정 · 출석 · 알림을 한 곳에서</p>
+    </div>
+  </section>
 
-  <main class="container">
-    <h1>홈 화면 OK!</h1>
-    <p>여기까지 뜨면 스프링이 제대로 동작하는 거야.</p>
-
-    <div class="card">
-      <h3>홍보중 스터디</h3>
-      <ul id="promo"><li class="meta">불러오는 중…</li></ul>
+  <!-- 내 스터디 (실데이터) -->
+  <section id="my-studies" class="section">
+    <div class="section__head">
+      <h2 class="section__title">내 스터디</h2>
+      <div class="section__actions">
+        <a href="/sessions" class="btn btn--ghost">일정/출석</a>
+        <a href="/explore" class="btn btn--primary">스터디 탐색</a>
+      </div>
     </div>
 
-    <div class="card" style="margin-top:16px;">
-      <h3>바로 가기</h3>
-      <ul>
-        <li><a th:href="@{/explore}">스터디 탐색으로 이동</a></li>
-        <li><a th:href="@{/sessions}">세션 페이지</a></li>
-        <li><a th:href="@{/notifications}">알림 확인</a></li>
-      </ul>
+    <!-- 로그인 유도 메시지 / 401 시 노출 -->
+    <div id="my-studies-login-hint" class="notice notice--info" hidden>
+      <span>로그인 후 내 스터디를 확인하세요.</span>
+      <a href="/auth/login" class="btn btn--link">로그인</a>
+      <a href="/auth/register" class="btn btn--link">회원가입</a>
     </div>
-  </main>
 
-  <script>
-    // 홈의 프로모 리스트
-    fetch('/api/studies')
-      .then(r => r.json())
-      .then(items => {
-        const ul = document.getElementById('promo');
-        ul.innerHTML = '';
-        items.slice(0, 3).forEach(s => {
-          const li = document.createElement('li');
-          const status = s.displayStatus === '마감' ? '마감' : '모집중';
-          li.textContent = `${s.title} [${s.category}] (${status}) ${s.current ?? 0}/${s.capacity ?? '-'}`;
-          ul.appendChild(li);
-        });
-        if (ul.children.length === 0) {
-          ul.innerHTML = '<li class="meta">표시할 스터디가 없습니다</li>';
-        }
-      })
-      .catch(() => {
-        const ul = document.getElementById('promo');
-        ul.innerHTML = '<li class="meta">불러오기에 실패했습니다</li>';
-      });
-  </script>
+    <!-- 로딩 스켈레톤 -->
+    <div id="my-studies-loading" class="skeleton-list">
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+    </div>
+
+    <!-- 컨텐츠 -->
+    <div id="my-studies-content" class="tabs" hidden>
+      <div class="tabs__nav">
+        <button class="tabs__btn is-active" data-tab="leader">리더</button>
+        <button class="tabs__btn" data-tab="member">멤버</button>
+        <button class="tabs__btn" data-tab="pending">대기중</button>
+      </div>
+
+      <div class="tabs__panes">
+        <div class="tabs__pane is-active" id="tab-leader">
+          <div class="card-grid" id="grid-leader" data-empty-text="리더 권한의 스터디가 없습니다."></div>
+        </div>
+        <div class="tabs__pane" id="tab-member">
+          <div class="card-grid" id="grid-member" data-empty-text="참여 중인 스터디가 없습니다."></div>
+        </div>
+        <div class="tabs__pane" id="tab-pending">
+          <div class="card-grid" id="grid-pending" data-empty-text="신청 대기 중인 스터디가 없습니다."></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 최신/마감임박 캐러셀(기존 유지) -->
+  <section id="discover" class="section">
+    <div class="section__head">
+      <h2 class="section__title">탐색: 최신/마감 임박</h2>
+      <div class="section__actions">
+        <a href="/explore" class="btn btn--ghost">전체 보기</a>
+      </div>
+    </div>
+
+    <div class="carousel" data-page-size="3">
+      <button class="carousel__nav prev" aria-label="이전">&larr;</button>
+      <div class="carousel__viewport" id="carousel-viewport">
+        <!-- home.js가 3개 단위로 채움(남는 칸 빈 카드) -->
+      </div>
+      <button class="carousel__nav next" aria-label="다음">&rarr;</button>
+    </div>
+    <div id="carousel-empty" class="muted" hidden>스터디가 없습니다.</div>
+  </section>
+</main>
+
+<script src="/notify.js"></script>
+<script src="/home.js"></script>
 </body>
 </html>

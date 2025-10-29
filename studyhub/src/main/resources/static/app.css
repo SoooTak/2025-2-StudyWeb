@@ -1,0 +1,97 @@
+/* ===== Design Tokens (v0.2) ===== */
+:root{
+  --bg:#f6f7fb; --card:#ffffff; --muted:#6b7280; --line:#e5e7eb;
+  --brand:#2563eb; --brand-dark:#1d4ed8; --danger:#ef4444;
+  --radius:12px; --radius-sm:8px; --shadow:0 4px 12px rgba(0,0,0,.08);
+  --maxw:1100px;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Noto Sans KR,sans-serif;color:#111;background:var(--bg);}
+
+/* ===== Header ===== */
+.sh-header{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#fff;border-bottom:1px solid var(--line);}
+.sh-header__left{display:flex;gap:8px;align-items:center;}
+.sh-iconbtn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#fff;padding:6px 10px;border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;}
+.sh-icon{font-size:18px;line-height:1;}
+.sh-brand{font-weight:700;text-decoration:none;color:#111;margin-left:6px;}
+.sh-nav{display:flex;gap:10px;align-items:center;flex-wrap:nowrap;}
+.sh-nav__link{display:inline-block;padding:8px 10px;border-radius:var(--radius-sm);text-decoration:none;color:#111;line-height:1.4;white-space:nowrap;}
+.sh-nav__link:hover{background:#f3f4f6;}
+.sh-header__right{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;}
+.sh-auth{display:flex;align-items:center;gap:8px;}
+.sh-auth--row{flex-wrap:nowrap;white-space:nowrap;}
+.sh-btn{display:inline-block;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--line);background:#fff;color:#111;text-decoration:none;cursor:pointer;white-space:nowrap;}
+.sh-btn--primary{background:var(--brand);color:#fff;border-color:var(--brand);}
+.sh-btn--primary:hover{background:var(--brand-dark);}
+.sh-btn--ghost:hover{background:#f3f4f6;}
+.sh-badge{position:relative;top:-8px;left:-8px;display:inline-block;background:var(--danger);color:#fff;border-radius:999px;font-size:11px;padding:1px 6px;}
+.sh-user__name{font-weight:600;white-space:nowrap;}
+
+/* ===== Popover / Side ===== */
+.sh-popover{position:fixed;top:52px;right:16px;width:320px;max-height:60vh;background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 6px 18px rgba(0,0,0,.08);overflow:auto;z-index:1000;}
+.sh-popover__header{padding:12px 14px;border-bottom:1px solid var(--line);font-weight:600;}
+.sh-popover__body{padding:10px;word-break:keep-all;line-height:1.5;}
+.sh-empty{padding:16px;color:var(--muted);}
+
+.sh-side{position:fixed;top:0;left:0;height:100vh;width:260px;background:#fff;border-right:1px solid var(--line);box-shadow:2px 0 12px rgba(0,0,0,.06);z-index:900;}
+.sh-side__header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);font-weight:600;}
+.sh-side__body{padding:10px;}
+.sh-side__link{display:block;padding:10px 12px;border-radius:var(--radius-sm);text-decoration:none;color:#111;line-height:1.5;white-space:nowrap;}
+.sh-side__link:hover{background:#f3f4f6;}
+.sh-side__sep{height:1px;background:var(--line);margin:10px 0;}
+
+/* ===== Layout & Sections ===== */
+.sh-container{max-width:var(--maxw);margin:16px auto;padding:0 16px;display:flex;flex-direction:column;gap:14px;}
+.sh-hero{padding:14px 16px;}
+.sh-hero--compact h1{font-size:20px;margin:0 0 4px 0;line-height:1.2;}
+.sh-hero--compact .sh-muted{margin:0 0 4px 0;font-size:13px;color:var(--muted);}
+.sh-subnote{margin:0;color:#4b5563;font-size:12px;}
+
+.sh-muted{color:var(--muted);}
+.sh-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px;box-shadow:var(--shadow);}
+.sh-card__header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.sh-title-sm{font-weight:600;}
+.sh-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media (max-width:900px){.sh-grid-2{grid-template-columns:1fr;}}
+
+.sh-calendar-placeholder{height:230px;border:1px dashed var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--muted);}
+
+/* ===== Carousel: 페이지네이션(3장 고정) ===== */
+.sh-carousel{position:relative;}
+.sh-carousel__viewport{overflow:hidden;}
+.sh-carousel__track{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+
+/* 페이지의 빈 칸 표시용 */
+.sh-card--ghost{height:120px;display:flex;align-items:center;justify-content:center;color:#6b7280;background:#fafafa;border:1px dashed var(--line);border-radius:10px;}
+
+/* 화살표 (항상 보이되, 이동 불가면 연하게) */
+.sh-car-arrow{
+  position:absolute;top:50%;transform:translateY(-50%);
+  width:40px;height:40px;border-radius:999px;border:2px solid var(--line);
+  background:#fff;color:#111;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.10);z-index:2;font-weight:800;font-size:20px;
+}
+.sh-car-prev{left:-10px;} .sh-car-next{right:-10px;}
+.sh-car-arrow:disabled{opacity:.4;cursor:not-allowed;color:#9ca3af;border-color:#e5e7eb;box-shadow:none;}
+.sh-car--nooverflow .sh-car-arrow{opacity:.4;pointer-events:none;color:#9ca3af;border-color:#e5e7eb;box-shadow:none;}
+
+/* ===== Study Card (페이지 방식: 셀 너비를 꽉 채움) ===== */
+.study-card{display:block;width:100%;min-width:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;color:inherit;text-decoration:none;box-shadow:var(--shadow);}
+.study-thumb{height:110px;background:#f3f4f6;background-size:cover;background-position:center;}
+.study-thumb.is-empty{display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:13px;}
+.study-body{padding:10px;}
+.study-title{font-weight:600;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.study-meta{display:flex;gap:6px;flex-wrap:wrap;}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#1e40af;font-size:12px;border:1px solid #e0e7ff;}
+.badge--muted{background:#f3f4f6;color:#374151;border-color:#e5e7eb;}
+
+/* ===== Lists ===== */
+.sh-mylist{display:flex;flex-direction:column;gap:10px;}
+.sh-mylist__item{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;}
+
+.sh-link{color:var(--brand);text-decoration:none;}
+.sh-link:hover{text-decoration:underline;}
+
+/* ===== Focus Visible ===== */
+:focus-visible{outline:3px solid rgba(37,99,235,.35);outline-offset:2px;border-radius:6px;}

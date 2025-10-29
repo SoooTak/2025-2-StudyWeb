@@ -4,10 +4,15 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.studyhub.common.api.ErrorResponse;
 import com.studyhub.domain.entity.Attendance;
 import com.studyhub.domain.entity.StudySession;
 import com.studyhub.domain.repository.AttendanceRepository;
@@ -42,12 +47,11 @@ public class SessionApi {
   /** (리더/공동리더) 세션 생성 */
   @PreAuthorize("@authz.canManageStudy(#studyId)")
   @PostMapping("/api/studies/{studyId}/sessions")
-  public ResponseEntity<?> create(@PathVariable Long studyId, @RequestBody CreateReq req) {
-    if (req.title() == null || req.title().isBlank()) {
-      return ResponseEntity.badRequest().body(Map.of("code","INVALID","message","title은 필수입니다"));
-    }
-    if (req.startAt() == null || req.endAt() == null || !req.endAt().isAfter(req.startAt())) {
-      return ResponseEntity.badRequest().body(Map.of("code","INVALID","message","시간 범위가 올바르지 않습니다"));
+  public ResponseEntity<?> create(@PathVariable Long studyId, @Valid @RequestBody CreateReq req) {
+    if (req.endAt() != null && req.startAt() != null && !req.endAt().isAfter(req.startAt())) {
+      // ✅ 표준 포맷으로 400
+      return ResponseEntity.badRequest()
+          .body(ErrorResponse.of("BAD_REQUEST", "시간 범위가 올바르지 않습니다"));
     }
 
     // 생성
@@ -92,16 +96,18 @@ public class SessionApi {
       var res = attendanceService.selfCheck(sessionId, userId);
       return ResponseEntity.ok(Map.of("result", res.state(), "attendanceId", res.attendanceId()));
     } catch (IllegalArgumentException e) {
-      return ResponseEntity.status(404).body(Map.of("code","NOT_FOUND","message", e.getMessage()));
+      // ✅ 표준 포맷으로 404
+      return ResponseEntity.status(404).body(ErrorResponse.of("NOT_FOUND", e.getMessage()));
     } catch (IllegalStateException e) {
-      return ResponseEntity.status(409).body(Map.of("code","CONFLICT","message", e.getMessage()));
+      // ✅ 표준 포맷으로 409
+      return ResponseEntity.status(409).body(ErrorResponse.of("CONFLICT", e.getMessage()));
     }
   }
 
   public record CreateReq(
-      String title,
-      LocalDateTime startAt,
-      LocalDateTime endAt,
+      @NotBlank String title,
+      @NotNull LocalDateTime startAt,
+      @NotNull LocalDateTime endAt,
       Boolean useAttendance,
       String mode,
       Integer openOffsetMinutes,

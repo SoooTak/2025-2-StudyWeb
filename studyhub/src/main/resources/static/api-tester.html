@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>API 테스터 (브라우저 전용)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    body { margin: 0; padding: 24px; background: #f6f7fb; color: #111; }
+    .wrap { max-width: 940px; margin: 0 auto; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    p.hint { margin: 0 0 16px; color: #555; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; }
+    .card h2 { font-size: 16px; margin: 0 0 8px; }
+    .row { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+    input[type="text"], input[type="number"], textarea {
+      width: 100%; padding: 10px; border:1px solid #d1d5db; border-radius: 8px; font-size: 14px;
+    }
+    button { background: #2563eb; color:#fff; border:none; padding:10px 14px; border-radius:8px; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+    .out { border:1px dashed #d1d5db; background:#fafafa; padding:12px; border-radius:8px; min-height:48px; }
+    .status { display:inline-block; margin-left: 8px; padding:2px 8px; background:#eef2ff; color:#312e81; border-radius:999px; font-size:12px; }
+    .warn { color:#b45309; font-size: 13px; }
+    @media (max-width: 880px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>API 테스터</h1>
+    <p class="hint">아래 버튼을 눌러 응답 JSON과 상태코드를 확인하세요. (설치·콘솔·터미널 불필요)</p>
+
+    <section class="grid">
+      <!-- 404 테스트 -->
+      <div class="card">
+        <h2>404 (리소스 없음)</h2>
+        <div class="row">
+          <input id="studyId404" type="number" placeholder="스터디 ID (예: 999999)" value="999999" />
+          <button onclick="getNotFound()">GET /api/studies/{id}</button>
+          <span id="s404" class="status"></span>
+        </div>
+        <div id="out404" class="out mono"></div>
+      </div>
+
+      <!-- 400 타입 불일치 -->
+      <div class="card">
+        <h2>400 (타입 불일치)</h2>
+        <div class="row">
+          <input id="sort" type="text" placeholder="sort (예: latest)" value="latest" />
+          <input id="page" type="text" placeholder="page (예: abc → 오류 유도)" value="abc" />
+          <button onclick="getTypeMismatch()">GET /api/studies?sort=...&page=...</button>
+          <span id="s400" class="status"></span>
+        </div>
+        <div id="out400" class="out mono"></div>
+      </div>
+
+      <!-- 회원가입 폼 검증 -->
+      <div class="card">
+        <h2>폼 검증 (회원가입)</h2>
+        <p class="warn">새 탭에서 열립니다. 아무것도 입력하지 않고 "가입하기"를 눌러보세요.</p>
+        <div class="row">
+          <button onclick="window.open('/register','_blank')">/register 열기</button>
+        </div>
+      </div>
+
+      <!-- POST 세션 생성 -->
+      <div class="card">
+        <h2>POST 테스트 (세션 생성)</h2>
+        <p class="warn">환경에 따라 CSRF 정책으로 403이 날 수 있습니다. 그런 경우 보안 설정에서 /api/** 예외를 열거나, 이후 UI에서 폼으로 테스트하세요.</p>
+        <div class="row">
+          <input id="studyIdPost" type="number" placeholder="스터디 ID (예: 1)" value="1" />
+        </div>
+        <div class="row">
+          <textarea id="payload" rows="7" class="mono">{
+  "title": "",
+  "startAt": null,
+  "endAt": null
+}</textarea>
+        </div>
+        <div class="row">
+          <button onclick="postCreate()">POST /api/studies/{id}/sessions</button>
+          <span id="sPost" class="status"></span>
+        </div>
+        <div id="outPost" class="out mono"></div>
+      </div>
+
+      <!-- 401/403 확인용 (로그인 필요 API) -->
+      <div class="card">
+        <h2>401/403 (인증/권한) 확인</h2>
+        <p class="warn">로그인하지 않은 상태에서 호출하면 JSON으로 401 또는 403을 확인할 수 있습니다.</p>
+        <div class="row">
+          <input id="sessionIdAuth" type="number" placeholder="세션 ID (예: 1)" value="1" />
+          <button onclick="getMyAttendance()">GET /api/sessions/{id}/attendance/my</button>
+          <span id="sAuth" class="status"></span>
+        </div>
+        <div id="outAuth" class="out mono"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    async function show(res, outEl, statusEl) {
+      let text;
+      try { text = await res.text(); } catch { text = '(본문 없음)'; }
+      statusEl.textContent = res.status + ' ' + res.statusText;
+      try {
+        const obj = JSON.parse(text);
+        outEl.textContent = JSON.stringify(obj, null, 2);
+      } catch {
+        outEl.textContent = text || '(본문 없음)';
+      }
+    }
+
+    async function getNotFound() {
+      const id = document.getElementById('studyId404').value || '999999';
+      const out = document.getElementById('out404');
+      const status = document.getElementById('s404');
+      out.textContent = '요청 중...';
+      const res = await fetch(`/api/studies/${id}`);
+      show(res, out, status);
+    }
+
+    async function getTypeMismatch() {
+      const sort = encodeURIComponent(document.getElementById('sort').value || 'latest');
+      const page = encodeURIComponent(document.getElementById('page').value || 'abc');
+      const out = document.getElementById('out400');
+      const status = document.getElementById('s400');
+      out.textContent = '요청 중...';
+      const res = await fetch(`/api/studies?sort=${sort}&page=${page}`);
+      show(res, out, status);
+    }
+
+    async function postCreate() {
+      const id = document.getElementById('studyIdPost').value || '1';
+      const payload = document.getElementById('payload').value || '{}';
+      const out = document.getElementById('outPost');
+      const status = document.getElementById('sPost');
+      out.textContent = '요청 중...';
+      try {
+        const res = await fetch(`/api/studies/${id}/sessions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload
+        });
+        show(res, out, status);
+      } catch (e) {
+        status.textContent = '요청 실패';
+        out.textContent = String(e);
+      }
+    }
+
+    async function getMyAttendance() {
+      const id = document.getElementById('sessionIdAuth').value || '1';
+      const out = document.getElementById('outAuth');
+      const status = document.getElementById('sAuth');
+      out.textContent = '요청 중...';
+      const res = await fetch(`/api/sessions/${id}/attendance/my`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      show(res, out, status);
+    }
+  </script>
+</body>
+</html>

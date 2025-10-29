@@ -1,37 +1,77 @@
+<!-- 공통 헤더 프래그먼트: 페이지의 <body> 안에서 th:replace 로 삽입 -->
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-  <meta charset="UTF-8">
-  <style>
-    .topbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid #eee; position:sticky; top:0; background:#fff; z-index:10; }
-    .brand { font-weight:800; }
-    .nav { display:flex; gap:12px; align-items:center; }
-    .link { text-decoration:none; color:#333; }
-    .btn { padding:6px 10px; border:1px solid #333; background:#fff; border-radius:8px; cursor:pointer; }
-  </style>
-</head>
-<body>
-  <!-- 명명된 프래그먼트 -->
-  <header class="topbar" th:fragment="siteHeader">
-    <div class="brand"><a class="link" th:href="@{/}">StudyHub</a></div>
-    <nav class="nav">
-      <a class="link" th:href="@{/explore}">스터디 탐색</a>
-      <a class="link" th:href="@{/sessions}">세션</a>
-      <a class="link" th:href="@{/notifications}">🔔 알림</a>
+<th:block th:fragment="header">
+  <header class="sh-header">
+    <div class="sh-header__left">
+      <button class="sh-iconbtn" aria-label="메뉴 열기" onclick="SH.toggleSide()">
+        <span class="sh-icon">≡</span>
+      </button>
+      <a class="sh-brand" th:href="@{/}">StudyHub</a>
+    </div>
 
-      <!-- 비회원 -->
-      <span th:if="${currentUser == null}">
-        <a class="link" th:href="@{/login}">로그인</a>
-        <a class="link" th:href="@{/register}">회원가입</a>
-      </span>
-
-      <!-- 회원 -->
-      <span th:if="${currentUser != null}" style="display:inline-flex; gap:12px; align-items:center;">
-        <span th:text="${currentUser.nickname}">닉네임</span>
-        <!-- ✅ GET 로그아웃 링크 (CSRF 불필요) -->
-        <a class="btn" th:href="@{/logout}">로그아웃</a>
-      </span>
+    <nav class="sh-nav">
+      <a th:href="@{/explore}" class="sh-nav__link">스터디 탐색</a>
+      <a th:href="@{/sessions}" class="sh-nav__link">내 스터디</a>
+      <a th:href="@{/support}" class="sh-nav__link">1:1 문의</a>
     </nav>
+
+    <!-- 오른쪽: 한 줄 고정 -->
+    <div class="sh-header__right">
+      <!-- 비회원 -->
+      <div class="sh-auth" th:if="${currentUser == null}">
+        <a class="sh-btn sh-btn--ghost" th:href="@{/login}">로그인</a>
+        <a class="sh-btn sh-btn--primary" th:href="@{/register}">회원가입</a>
+      </div>
+
+      <!-- 회원: 닉네임 → 종 → 로그아웃 (가로 한 줄, 줄바꿈 금지) -->
+      <div class="sh-auth sh-auth--row" th:if="${currentUser != null}">
+        <span class="sh-user__name" th:text="${currentUser.nickname}">닉네임</span>
+        <button class="sh-iconbtn" aria-label="알림" onclick="SH.toggleBell()">
+          <span class="sh-icon">🔔</span>
+          <span id="sh-badge" class="sh-badge" style="display:none;">0</span>
+        </button>
+        <a class="sh-btn sh-btn--ghost" th:href="@{/logout}">로그아웃</a>
+      </div>
+    </div>
   </header>
-</body>
+
+  <!-- 알림 팝오버 -->
+  <div id="sh-bell" class="sh-popover" style="display:none;">
+    <div class="sh-popover__header">알림</div>
+    <div id="sh-bell-list" class="sh-popover__body">
+      <div class="sh-empty">알림이 없습니다.</div>
+    </div>
+  </div>
+
+  <!-- 사이드 슬라이드 메뉴 -->
+  <aside id="sh-side" class="sh-side" style="display:none;">
+    <div class="sh-side__header">
+      <span>빠른 이동</span>
+      <button class="sh-iconbtn" aria-label="닫기" onclick="SH.toggleSide()">✕</button>
+    </div>
+    <div class="sh-side__body">
+      <a th:href="@{/}" class="sh-side__link">홈</a>
+      <a th:href="@{/explore}" class="sh-side__link">스터디 탐색</a>
+      <a th:href="@{/sessions}" class="sh-side__link">내 스터디</a>
+      <a th:href="@{/support}" class="sh-side__link">1:1 문의</a>
+      <div class="sh-side__sep"></div>
+      <a th:if="${currentUser == null}" th:href="@{/login}" class="sh-side__link">로그인</a>
+      <a th:if="${currentUser == null}" th:href="@{/register}" class="sh-side__link">회원가입</a>
+      <a th:if="${currentUser != null}" th:href="@{/logout}" class="sh-side__link">로그아웃</a>
+    </div>
+  </aside>
+
+  <script>
+    window.SH = window.SH || {};
+    SH.toggleSide = function () {
+      const el = document.getElementById('sh-side');
+      el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
+    }
+    SH.toggleBell = function () {
+      const el = document.getElementById('sh-bell');
+      el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
+    }
+  </script>
+</th:block>
 </html>
