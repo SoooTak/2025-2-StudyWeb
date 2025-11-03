@@ -2,6 +2,7 @@ package com.studyhub.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -12,6 +13,9 @@ import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AndRequestMatcher;
 import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
+import org.springframework.security.web.authentication.www.BasicAuthenticationEntryPoint;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 
 import com.studyhub.security.CustomUserDetailsService;
 
@@ -44,6 +48,7 @@ public class SecurityConfig {
                 // 인증 필요
                 .requestMatchers("/notifications/**", "/api/notifications/**").authenticated()
                 .requestMatchers("/sessions/**", "/api/sessions/**").authenticated()
+                .requestMatchers("/api/mystudies").authenticated()
                 .requestMatchers("/admin/**").authenticated()
                 .anyRequest().authenticated()
             )
@@ -55,9 +60,15 @@ public class SecurityConfig {
                 .permitAll()
             )
             .httpBasic(httpBasic -> httpBasic.disable())
-            .exceptionHandling(e -> e.authenticationEntryPoint(
-                new LoginUrlAuthenticationEntryPoint("/login")
-            ))
+            // ✅ API 요청은 401, 웹페이지는 /login 으로: 엔트리포인트 분기
+            .exceptionHandling(e -> e
+                .defaultAuthenticationEntryPointFor(
+                    new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                    // /api/** 에 일괄 적용
+                    new AntPathRequestMatcher("/api/**")
+                )
+                .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
+            )
             .requestCache(c -> c.requestCache(requestCache))   // ✔ SavedRequest 커스터마이즈
             .logout(logout -> logout
                 .logoutRequestMatcher(new AntPathRequestMatcher("/logout", "GET"))

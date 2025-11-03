@@ -9,10 +9,9 @@
 
   async function fetchJson(url, init){
     const res = await fetch(url, {
-      headers: { 'X-Requested-With': 'XMLHttpRequest' }, // ✔ AJAX 표시(안전장치)
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
       ...init
     });
-    // 미로그인/권한없음은 조용히 무시
     if (res.status === 401 || res.status === 403) throw new Error('AUTH');
     let data = null;
     try { data = await res.json(); } catch(e){}
@@ -46,7 +45,6 @@
         list.appendChild(div);
       });
     } catch(e) {
-      // 미로그인 등: 배지 끄고, 메시지는 간단히
       if (e.message === 'AUTH') {
         if (dot) dot.style.display = 'none';
         list.textContent = '알림을 보려면 로그인하세요.';
@@ -56,14 +54,12 @@
     }
   }
 
-  // 팝오버 토글
   bell.addEventListener('click', async (e) => {
     e.stopPropagation();
     const willOpen = pop.style.display !== 'block';
     if (willOpen) {
       await load();
       pop.style.display = 'block';
-      // 열리면 모두 읽음 처리
       try {
         await fetch('/api/notifications/read-all', {
           method:'POST',
@@ -77,11 +73,9 @@
     }
   });
 
-  // 바깥 클릭 시 닫기
   document.addEventListener('click', () => { pop.style.display = 'none'; });
   pop.addEventListener('click', (e) => e.stopPropagation());
 
-  // 최초 배지 상태만 미리 확인(실패 시 무시)
   (async () => {
     try {
       const data = await fetchJson('/api/notifications');

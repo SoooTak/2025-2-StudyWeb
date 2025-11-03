@@ -18,6 +18,9 @@ public interface MembershipRepository extends JpaRepository<Membership, Long> {
     // 스터디별 멤버 수
     long countByStudyId(Long studyId);
 
-    // ✅ 스터디별 전체 멤버 조회 (NotificationService에서 사용)
+    // 스터디별 전체 멤버 조회
     List<Membership> findByStudyId(Long studyId);
+
+    // ✅ 사용자 기준 모든 멤버십
+    List<Membership> findByUserId(Long userId);
 }

@@ -20,6 +20,9 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
     // 스터디별 특정 상태 전체
     List<Application> findByStudyIdAndStatus(Long studyId, String status);
 
-    // ✅ 스터디별 특정 상태를 생성일 오름차순으로
+    // 특정 상태를 생성일 오름차순으로
     List<Application> findByStudyIdAndStatusOrderByCreatedAtAsc(Long studyId, String status);
+
+    // ✅ 사용자 기준 대기중 신청 목록
+    List<Application> findByUserIdAndStatus(Long userId, String status);
 }

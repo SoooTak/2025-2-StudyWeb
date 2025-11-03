@@ -5,11 +5,11 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
-import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
+
+import org.springframework.beans.factory.annotation.Autowired; // Optional injection
 
 import java.time.Instant;
 import java.util.Collections;
@@ -18,9 +18,9 @@ import java.util.List;
 /**
  * 내 스터디 묶음 조회 파사드 API
  *
- * - 경로/시그니처 충돌 방지를 위해 domain/service/repository 에 의존하지 않는 얇은 파사드.
- * - 실제 데이터 연동은 MyStudiesReadService 빈을 별도 구현하여 주입하면 자동 전환됨.
- * - 기본 구현(default bean)은 빈 리스트를 반환하므로 기존 기능에 영향 없음.
+ * - domain/service/repository 에 직접 의존하지 않는 얇은 파사드.
+ * - 실데이터 연동 시 MyStudiesReadService 의 @Service 구현을 추가하면 자동 사용.
+ * - 만약 구현 빈이 없으면, 컨트롤러 내부에서 안전 기본 구현(Empty)을 사용합니다.
  *
  * GET /api/mystudies
  * 응답:
@@ -37,17 +37,24 @@ public class MyStudiesApi {
 
     private final MyStudiesReadService readService;
 
-    public MyStudiesApi(MyStudiesReadService readService) {
-        this.readService = readService;
+    /**
+     * 주입 가능한 빈이 없으면 자동으로 Empty 구현을 사용하도록 처리합니다.
+     * - @Autowired(required = false) 로 선택 주입
+     * - null 이면 new EmptyMyStudiesReadService() 로 대체
+     */
+    public MyStudiesApi(@Autowired(required = false) MyStudiesReadService readService) {
+        if (readService == null) {
+            log.info("[MyStudies] No MyStudiesReadService bean found. Using Empty fallback.");
+            this.readService = new EmptyMyStudiesReadService();
+        } else {
+            this.readService = readService;
+        }
     }
 
     @GetMapping
     public MyStudiesResponse getMyStudies(Authentication authentication) {
-        // 인증은 SecurityConfig에서 이 경로를 보호하고 있다고 가정 (로그인 필요)
-        // 혹시 공개로 열려 있어도, 기본 구현은 빈 목록만 반환하므로 오류 없이 동작.
         MyStudiesResponse resp = readService.readForCurrentUser(authentication);
         if (resp == null) {
-            // NPE 방지: 방어적으로 빈 응답
             resp = MyStudiesResponse.empty();
         }
         return resp;
@@ -85,7 +92,7 @@ public class MyStudiesApi {
     /* ============ 포트(인터페이스) & 안전 기본 구현 ============ */
 
     /**
-     * 실제 구현체는 별도 파일에서 @Service 로 등록하여 주입하세요.
+     * 실제 구현체는 @Service 로 등록하여 주입하세요.
      * 예) DB 조회로 현재 사용자 기준 leader/member/pending 목록 구성.
      */
     public interface MyStudiesReadService {
@@ -93,18 +100,14 @@ public class MyStudiesApi {
     }
 
     /**
-     * 안전 기본 구현: 빈 목록 반환
-     * - 프로젝트에 별도 구현체가 없을 때 자동 등록
-     * - 실데이터 구현(@Service)이 존재하면 이 빈은 등록되지 않음
+     * 안전 기본 구현(빈 목록 반환). 스프링 빈이 아니며,
+     * 컨트롤러 생성자에서 주입 실패 시 직접 생성하여 사용합니다.
      */
-    @Component
-    @ConditionalOnMissingBean(MyStudiesReadService.class)
     public static class EmptyMyStudiesReadService implements MyStudiesReadService {
         @Override
         public MyStudiesResponse readForCurrentUser(Authentication auth) {
-            // 로그로 호출 주체를 남겨 디버깅 편의 제공
             String who = (auth != null ? String.valueOf(auth.getName()) : "anonymous");
-            log.info("[MyStudies] fallback EmptyMyStudiesReadService used. principal={}", who);
+            log.info("[MyStudies] EmptyMyStudiesReadService used. principal={}", who);
             return MyStudiesResponse.empty();
         }
     }

@@ -4,6 +4,7 @@
 <th:block th:fragment="header">
   <header class="sh-header">
     <div class="sh-header__left">
+      <!-- ✅ 햄버거 복구 -->
       <button class="sh-iconbtn" aria-label="메뉴 열기" onclick="SH.toggleSide()">
         <span class="sh-icon">≡</span>
       </button>
@@ -12,11 +13,11 @@
 
     <nav class="sh-nav">
       <a th:href="@{/explore}" class="sh-nav__link">스터디 탐색</a>
-      <a th:href="@{/sessions}" class="sh-nav__link">내 스터디</a>
+      <!-- ✅ 홈 내 섹션 앵커 -->
+      <a href="/#my-studies" class="sh-nav__link">내 스터디</a>
       <a th:href="@{/support}" class="sh-nav__link">1:1 문의</a>
     </nav>
 
-    <!-- 오른쪽: 한 줄 고정 -->
     <div class="sh-header__right">
       <!-- 비회원 -->
       <div class="sh-auth" th:if="${currentUser == null}">
@@ -24,12 +25,13 @@
         <a class="sh-btn sh-btn--primary" th:href="@{/register}">회원가입</a>
       </div>
 
-      <!-- 회원: 닉네임 → 종 → 로그아웃 (가로 한 줄, 줄바꿈 금지) -->
+      <!-- 회원 -->
       <div class="sh-auth sh-auth--row" th:if="${currentUser != null}">
         <span class="sh-user__name" th:text="${currentUser.nickname}">닉네임</span>
-        <button class="sh-iconbtn" aria-label="알림" onclick="SH.toggleBell()">
+        <!-- notify.js ID와 일치 -->
+        <button id="bell" class="sh-iconbtn" aria-label="알림">
           <span class="sh-icon">🔔</span>
-          <span id="sh-badge" class="sh-badge" style="display:none;">0</span>
+          <span id="dot" class="sh-badge" style="display:none;">•</span>
         </button>
         <a class="sh-btn sh-btn--ghost" th:href="@{/logout}">로그아웃</a>
       </div>
@@ -37,9 +39,12 @@
   </header>
 
   <!-- 알림 팝오버 -->
-  <div id="sh-bell" class="sh-popover" style="display:none;">
-    <div class="sh-popover__header">알림</div>
-    <div id="sh-bell-list" class="sh-popover__body">
+  <div id="popover" class="sh-popover" style="display:none;">
+    <div class="sh-popover__header">
+      알림
+      <button id="readAllBtn" class="sh-btn sh-btn--ghost" style="float:right;">모두 읽음</button>
+    </div>
+    <div id="popList" class="sh-popover__body">
       <div class="sh-empty">알림이 없습니다.</div>
     </div>
   </div>
@@ -53,7 +58,7 @@
     <div class="sh-side__body">
       <a th:href="@{/}" class="sh-side__link">홈</a>
       <a th:href="@{/explore}" class="sh-side__link">스터디 탐색</a>
-      <a th:href="@{/sessions}" class="sh-side__link">내 스터디</a>
+      <a href="/#my-studies" class="sh-side__link">내 스터디</a>
       <a th:href="@{/support}" class="sh-side__link">1:1 문의</a>
       <div class="sh-side__sep"></div>
       <a th:if="${currentUser == null}" th:href="@{/login}" class="sh-side__link">로그인</a>
@@ -66,10 +71,6 @@
     window.SH = window.SH || {};
     SH.toggleSide = function () {
       const el = document.getElementById('sh-side');
-      el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
-    }
-    SH.toggleBell = function () {
-      const el = document.getElementById('sh-bell');
       el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
     }
   </script>
